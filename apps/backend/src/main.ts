@@ -1,5 +1,6 @@
 import { Elysia } from 'elysia';
 import { cors } from '@elysiajs/cors';
+import { swagger } from '@elysiajs/swagger';
 import { explorerRoutes } from './modules/explorer/interfaces/explorer.routes';
 
 const app = new Elysia()
@@ -7,6 +8,16 @@ const app = new Elysia()
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
+  }))
+  .use(swagger({
+    path: '/swagger',
+    documentation: {
+      info: {
+        title: '📂 File Explorer API Docs',
+        version: '1.0.0',
+        description: 'Interactive API documentation for the File Explorer clone'
+      }
+    }
   }))
   .get('/', () => 'File Explorer Backend is running')
   .use(explorerRoutes)
