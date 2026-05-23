@@ -8,7 +8,8 @@ Recursive tree navigation with dynamic **Lazy Loading**, interactive breadcrumb 
 
 ### 🌐 Live Demo
 The application is deployed on AWS Free Tier and is live here:
-👉 **[Live File Explorer Clone](https://firstyudha.my.id/)**
+- 👉 **[File Explorer Web](https://firstyudha.my.id/)**
+- 👉 **[File Explorer API Docs](https://firstyudha.my.id/api/swagger)**
 
 ---
 
