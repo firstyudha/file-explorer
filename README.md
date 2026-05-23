@@ -21,6 +21,7 @@ The application is deployed on AWS Free Tier and is live here:
 - **Debounced Search Bar (300ms)**: Reduces server queries and network load by executing live search calls only 300ms after the user finishes typing.
 - **Smart Cache-First Strategy**: Instantly serves folders that have already been opened during the session, showing loader spinner animations only for cache-misses.
 - **Cache Invalidation & Refresh**: Includes a refresh trigger that invalidates the local state of the current folder and requests fresh data from the server.
+- **Interactive Swagger API Documentation**: Auto-generated interactive API playground integrated natively at `/swagger` on the backend, detailing input/output DTO schemas, strict validation rules, and error response models.
 
 ---
 
@@ -79,6 +80,7 @@ The backend module `apps/backend/src/modules/explorer` enforces a strict **Separ
 - **Framework**: Elysia (Fast, type-safe, Zod-friendly Bun HTTP framework)
 - **Database ORM**: Prisma ORM
 - **Database**: PostgreSQL (Containerized via Docker)
+- **API Documentation**: `@elysiajs/swagger` (OpenAPI 3.0 / Swagger UI interactive runner)
 
 ### Testing
 - **Backend Tests**: Bun test & Vitest
@@ -136,6 +138,8 @@ Run both the Elysia backend server (`http://localhost:3000`) and the Vue 3 front
 pnpm dev
 ```
 Open **`http://localhost:5173`** in your browser to experience the application.
+
+> 📘 **Interactive API Documentation**: While the backend is running, you can access the auto-generated Swagger API documentation at **`http://localhost:3000/swagger`** to browse, explore, and test the folder traversing and search endpoints directly in your browser.
 
 ---
 
