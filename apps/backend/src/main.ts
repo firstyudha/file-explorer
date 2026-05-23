@@ -11,6 +11,7 @@ const app = new Elysia()
   }))
   .use(swagger({
     path: '/api/swagger',
+    specPath: '/api/swagger/json',
     documentation: {
       info: {
         title: '📂 File Explorer API Docs',
@@ -31,6 +32,17 @@ const app = new Elysia()
         error: {
           code: 'VALIDATION_FAILED',
           message: error.message || 'Request validation failed'
+        }
+      };
+    }
+
+    if (code === 'NOT_FOUND') {
+      set.status = 404;
+      return {
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: error.message || 'Route not found'
         }
       };
     }
