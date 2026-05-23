@@ -1,0 +1,33 @@
+{
+  "name": "@apps/backend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "bun run --watch src/main.ts",
+    "build": "bun build ./src/main.ts --outdir ./dist --target bun --external @prisma/client",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio",
+    "start": "bun run dist/main.js",
+    "test": "vitest run"
+  },
+  "prisma": {
+    "seed": "bun prisma/seed.ts"
+  },
+  "dependencies": {
+    "@elysiajs/cors": "^1.4.2",
+    "@packages/shared-types": "workspace:*",
+    "@prisma/client": "^5.0.0",
+    "aws-sdk": "^2.1693.0",
+    "elysia": "^1.0.0",
+    "pino": "^9.0.0",
+    "prisma": "^5.0.0",
+    "zod": "^3.0.0"
+  },
+  "devDependencies": {
+    "@packages/tsconfig": "workspace:*",
+    "@sinclair/typebox": "^0.34.49",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}

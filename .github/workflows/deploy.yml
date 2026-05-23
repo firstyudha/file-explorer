@@ -1,0 +1,177 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgrespassword
+          POSTGRES_DB: explorer_db
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9.1.0
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: |
+          cd apps/backend
+          bun prisma generate
+
+      - name: Setup database schema for testing
+        run: |
+          cd apps/backend
+          bun prisma db push
+        env:
+          DATABASE_URL: postgresql://postgres:postgrespassword@localhost:5435/explorer_db?schema=public
+
+      - name: Run Tests
+        run: pnpm run test
+        env:
+          DATABASE_URL: postgresql://postgres:postgrespassword@localhost:5435/explorer_db?schema=public
+
+      - name: Build Projects
+        run: pnpm run build
+        env:
+          DATABASE_URL: postgresql://postgres:postgrespassword@localhost:5435/explorer_db?schema=public
+
+      - name: Upload Frontend Artifacts
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: apps/frontend/dist/
+
+      - name: Upload Backend Artifacts
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-dist
+          path: |
+            apps/backend/dist/
+            apps/backend/package.json
+            apps/backend/prisma/
+            package.json
+            pnpm-lock.yaml
+            pnpm-workspace.yaml
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: AWS_EXPLORER
+
+    steps:
+      - name: Download Frontend Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist-frontend
+
+      - name: Download Backend Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-dist
+          path: dist-backend
+
+      - name: Install SSH Key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.AWS_EC2_SSH_KEY }}
+          known_hosts: 'placeholder'
+          if_key_exists: replace
+
+      - name: Adding Known Hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.AWS_EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy Frontend Assets to EC2
+        run: |
+          rsync -avz --delete dist-frontend/ ${{ secrets.AWS_EC2_USERNAME }}@${{ secrets.AWS_EC2_HOST }}:/var/www/html/
+
+      - name: Deploy Backend Assets to EC2
+        run: |
+          ssh ${{ secrets.AWS_EC2_USERNAME }}@${{ secrets.AWS_EC2_HOST }} "mkdir -p ~/app/backend"
+          rsync -avz --delete dist-backend/ ${{ secrets.AWS_EC2_USERNAME }}@${{ secrets.AWS_EC2_HOST }}:~/app/backend/
+
+      - name: Run Post-Deployment Commands on EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.AWS_EC2_HOST }}
+          username: ${{ secrets.AWS_EC2_USERNAME }}
+          key: ${{ secrets.AWS_EC2_SSH_KEY }}
+          script: |
+            export PATH="$HOME/.bun/bin:$PATH"
+            # Load environment variables (nvm/node/bun might need to be loaded)
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+            # 1. Install production dependencies at the monorepo root
+            cd ~/app/backend
+            pnpm install --prod --frozen-lockfile
+            
+            # 2. Configure environment variables in the backend directory
+            cd ~/app/backend/apps/backend
+            echo "DATABASE_URL=\"${{ secrets.DATABASE_URL }}\"" > .env
+            echo "NODE_ENV=production" >> .env
+            echo "PORT=3000" >> .env
+            
+            # 3. Generate Prisma Client and run migrations
+            pnpm prisma generate
+            pnpm prisma migrate deploy
+            
+            # 4. Restart Backend process using PM2 (fresh start to avoid state issues)
+            pm2 delete explorer-backend > /dev/null 2>&1 || true
+            pm2 start dist/main.js --name explorer-backend --interpreter bun --cwd ~/app/backend/apps/backend
+            pm2 save
