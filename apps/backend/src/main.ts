@@ -12,6 +12,11 @@ const app = new Elysia()
   .use(swagger({
     path: '/api/swagger',
     specPath: '/api/swagger/json',
+    scalarConfig: {
+      spec: {
+        url: '/api/swagger/json'
+      }
+    },
     documentation: {
       info: {
         title: '📂 File Explorer API Docs',
