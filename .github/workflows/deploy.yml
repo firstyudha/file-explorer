@@ -109,7 +109,7 @@ jobs:
     needs: build-and-test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment: AWS_EXPLORER
+    environment: production
 
     steps:
       - name: Download Frontend Artifacts
