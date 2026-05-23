@@ -10,7 +10,7 @@ const app = new Elysia()
     allowedHeaders: ['Content-Type', 'Authorization']
   }))
   .use(swagger({
-    path: '/swagger',
+    path: '/api/swagger',
     documentation: {
       info: {
         title: '📂 File Explorer API Docs',

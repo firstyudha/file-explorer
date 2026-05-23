@@ -139,7 +139,7 @@ pnpm dev
 ```
 Open **`http://localhost:5173`** in your browser to experience the application.
 
-> 📘 **Interactive API Documentation**: While the backend is running, you can access the auto-generated Swagger API documentation at **`http://localhost:3000/swagger`** to browse, explore, and test the folder traversing and search endpoints directly in your browser.
+> 📘 **Interactive API Documentation**: While the backend is running, you can access the auto-generated Swagger API documentation at **`http://localhost:3000/api/swagger`** to browse, explore, and test the folder traversing and search endpoints directly in your browser.
 
 ---
 
